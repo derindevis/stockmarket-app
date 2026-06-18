@@ -1,0 +1,14 @@
+# Backend package requirements declarations
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+python-jose
+passlib
+yfinance
+pandas
+numpy
+google-genai
+torch
+scikit-learn
+requests

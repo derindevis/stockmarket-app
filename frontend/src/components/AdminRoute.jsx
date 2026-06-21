@@ -1,16 +1,16 @@
-import { Navigate } from "react-router-dom";
-import { useAuth } from "../AuthContext";
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '../AuthContext'
 
 export default function AdminRoute({ children }) {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth()
 
   if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/admin/login" replace />
   }
 
   if (!isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/dashboard" replace />
   }
 
-  return children;
+  return children
 }

@@ -1,4 +1,3 @@
-// Global user state (Login / Logout / Signup)
 import { createContext, useContext, useState, useEffect } from 'react'
 import api from './api'
 
@@ -34,6 +33,7 @@ export function AuthProvider({ children }) {
     const { access_token } = res.data
     localStorage.setItem('token', access_token)
     setToken(access_token)
+    // Fetch user details immediately using the new token
     const meRes = await api.get('/auth/me', {
       headers: { Authorization: `Bearer ${access_token}` }
     })
@@ -46,6 +46,7 @@ export function AuthProvider({ children }) {
     const { access_token } = res.data
     localStorage.setItem('token', access_token)
     setToken(access_token)
+    // Fetch user details immediately using the new token
     const meRes = await api.get('/auth/me', {
       headers: { Authorization: `Bearer ${access_token}` }
     })
@@ -54,10 +55,11 @@ export function AuthProvider({ children }) {
   }
 
   const adminLogin = async (username, password) => {
-    const res = await api.post('/api/auth/admin/login', { username, password })
+    const res = await api.post('/auth/admin/login', { username, password })
     const { access_token } = res.data
     localStorage.setItem('token', access_token)
     setToken(access_token)
+    // Fetch user details immediately using the new token
     const meRes = await api.get('/auth/me', {
       headers: { Authorization: `Bearer ${access_token}` }
     })

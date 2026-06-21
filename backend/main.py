@@ -1,4 +1,6 @@
 from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -6,7 +8,7 @@ import json
 from typing import List
 
 from database import get_db, create_tables
-from models import User, WatchlistItem, Prediction, Alert, ComparsionHistory, Forecast
+from models import User, WatchlistItem, Prediction, Alert, ComparisonHistory, Forecast
 from schemas import (
     UserCreate, UserLogin, UserResponse, TokenResponse,
     WatchlistAdd, WatchlistResponse,
@@ -20,18 +22,17 @@ from auth import hash_password, verify_password, create_access_token, get_curren
 from stock_service import search_stock, get_stock_details, get_stock_history, get_stock_price
 from indicators import calculate_all_indicators
 from recommendation import generate_recommendation, generate_explanation
-from Forecast_service import generate_lstm_forecast
-
-load_dotenv()
+from forecast_service import generate_lstm_forecast
 
 app = FastAPI(title="AI Stock Analysis & Forecasting Platform API")
 
+# Setup CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins="http://localhost:5173",
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 
 @app.on_event("startup")
@@ -46,19 +47,22 @@ def read_root():
         "docs_url": "/docs"
     }
 
+# ══════════════════════════════════════════════════════════════
+# AUTHENTICATION
+# ══════════════════════════════════════════════════════════════
 
-#=====Authentication=====
 @app.post("/api/auth/register", response_model=TokenResponse)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    # Check if username or email exists
     if db.query(User).filter(User.username == user_data.username).first():
         raise HTTPException(status_code=400, detail="Username already taken")
     if db.query(User).filter(User.email == user_data.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
-
+        
     # Check if first user is admin, otherwise user
     is_first_user = db.query(User).count() == 0
     role = "admin" if is_first_user else "user"
-
+    
     new_user = User(
         username=user_data.username,
         email=user_data.email,
@@ -69,7 +73,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-
+    
     token = create_access_token(data={"sub": new_user.username, "role": new_user.role})
     return TokenResponse(access_token=token)
 
@@ -101,8 +105,9 @@ def admin_login(user_data: UserLogin, db: Session = Depends(get_db)):
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
-
-#=====Stocks=====
+# ══════════════════════════════════════════════════════════════
+# STOCKS
+# ══════════════════════════════════════════════════════════════
 
 @app.get("/api/stocks/search")
 def search(q: str = Query(..., min_length=1)):
@@ -136,22 +141,22 @@ def stock_chart_alias(symbol: str, period: str = "1mo"):
 @app.get("/api/stocks/{symbol}/analysis", response_model=AnalysisResponse)
 def analyze_stock(symbol: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     symbol = symbol.upper()
-    #Technical indicators
+    # 1. Calculate technical indicators
     indicators_data = calculate_all_indicators(symbol)
     if not indicators_data:
         raise HTTPException(status_code=404, detail=f"Insufficient market data to analyze '{symbol}'")
         
-    #Recommendations and signals
+    # 2. Generate recommendations and signals
     recommend_data = generate_recommendation(indicators_data)
     ai_explanation = generate_explanation(indicators_data, recommend_data["signal"], recommend_data["confidence"], symbol)
     
-    #Prediction record (Analysis History)
+    # 3. Create a Prediction record (Analysis History)
     pred_record = Prediction(
         user_id=current_user.id,
         symbol=symbol,
         rsi=indicators_data["rsi"],
         macd=indicators_data["macd"],
-        moving_average=indicators_data["sma_20"],
+        moving_average=indicators_data["sma_20"], # Use SMA 20 as primary MA
         beta=indicators_data["beta"],
         pe_ratio=indicators_data["pe_ratio"],
         sharpe_ratio=indicators_data["sharpe_ratio"],
@@ -162,8 +167,9 @@ def analyze_stock(symbol: str, current_user: User = Depends(get_current_user), d
     )
     db.add(pred_record)
     
-    #User alerts
+    # 4. Check user alerts
     check_alerts_for_stock(current_user.id, symbol, indicators_data, db)
+    
     db.commit()
     
     return AnalysisResponse(
@@ -174,12 +180,14 @@ def analyze_stock(symbol: str, current_user: User = Depends(get_current_user), d
         indicators=IndicatorValues(**indicators_data)
     )
 
-#To check and trigger user alerts
+# Helper function to check and trigger user alerts
 def check_alerts_for_stock(user_id: int, symbol: str, indicators: dict, db: Session):
     alerts = db.query(Alert).filter(Alert.user_id == user_id, Alert.symbol == symbol, Alert.is_triggered == False).all()
     for alert in alerts:
         triggered = False
         if alert.alert_type == "rsi_threshold":
+            # If threshold is e.g. 30 (oversold) check if RSI went below it, or if it is 70 (overbought) check if RSI went above it.
+            # Generally, we can trigger if it matches threshold crossings or generic direction
             rsi_val = indicators.get("rsi", 50.0)
             if alert.threshold >= 50.0 and rsi_val >= alert.threshold:
                 triggered = True
@@ -190,13 +198,16 @@ def check_alerts_for_stock(user_id: int, symbol: str, indicators: dict, db: Sess
             if vol_val >= alert.threshold:
                 triggered = True
         elif alert.alert_type == "signal_change":
-            triggered = True
+            # Signal change is a bit different; we can compare against the recommendation
+            # For simplicity, we can just trigger if confidence is high or signal matches threshold scoring
+            triggered = True # Trigger on analysis request to notify user
             
         if triggered:
             alert.is_triggered = True
 
-
-#=====Watchlist=====
+# ══════════════════════════════════════════════════════════════
+# WATCHLIST
+# ══════════════════════════════════════════════════════════════
 
 @app.get("/api/watchlist", response_model=List[WatchlistResponse])
 def get_watchlist(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -217,10 +228,13 @@ def get_watchlist(current_user: User = Depends(get_current_user), db: Session = 
 @app.post("/api/watchlist", status_code=201)
 def add_to_watchlist(data: WatchlistAdd, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     symbol = data.symbol.upper()
+    
+    # Check if stock exists
     stock = search_stock(symbol)
     if stock is None:
         raise HTTPException(status_code=404, detail=f"Stock symbol '{symbol}' not found")
-
+        
+    # Check if already in watchlist
     existing = db.query(WatchlistItem).filter(WatchlistItem.user_id == current_user.id, WatchlistItem.symbol == symbol).first()
     if existing:
         raise HTTPException(status_code=400, detail="Stock is already in your watchlist")
@@ -242,8 +256,10 @@ def remove_from_watchlist(symbol: str, current_user: User = Depends(get_current_
     db.commit()
     return {"message": "Removed from watchlist successfully", "symbol": symbol}
 
+# ══════════════════════════════════════════════════════════════
+# HISTORY
+# ══════════════════════════════════════════════════════════════
 
-#=====History=====
 @app.get("/api/history", response_model=List[PredictionResponse])
 def get_history(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     history = db.query(Prediction).filter(Prediction.user_id == current_user.id).order_by(Prediction.created_at.desc()).all()
@@ -255,8 +271,10 @@ def clear_history(current_user: User = Depends(get_current_user), db: Session = 
     db.commit()
     return {"message": "Analysis history cleared successfully"}
 
+# ══════════════════════════════════════════════════════════════
+# COMPARISON
+# ══════════════════════════════════════════════════════════════
 
-#=====Comparison=====
 @app.post("/api/compare", response_model=CompareResponse)
 def compare_stocks(data: CompareRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if len(data.symbols) < 2 or len(data.symbols) > 4:
@@ -270,12 +288,14 @@ def compare_stocks(data: CompareRequest, current_user: User = Depends(get_curren
         details = get_stock_details(sym)
         if not details:
             continue
+            
         indicators = calculate_all_indicators(sym)
         if not indicators:
-            continue  
+            continue
+            
         recommend = generate_recommendation(indicators)
         
-        #Merge basic details, indicators, and recommendation
+        # Merge basic details, indicators, and recommendation
         stock_data = {
             **details,
             "rsi": indicators["rsi"],
@@ -292,16 +312,19 @@ def compare_stocks(data: CompareRequest, current_user: User = Depends(get_curren
     if not compare_results:
         raise HTTPException(status_code=400, detail="None of the symbols provided could be analyzed")
         
-    #Save comparison history
+    # Save comparison history
     comp_record = ComparisonHistory(
         user_id=current_user.id,
         symbols=json.dumps(clean_symbols)
     )
     db.add(comp_record)
     db.commit()
+    
     return CompareResponse(stocks=compare_results)
 
-#=====Alerts=====
+# ══════════════════════════════════════════════════════════════
+# ALERTS
+# ══════════════════════════════════════════════════════════════
 
 @app.get("/api/alerts", response_model=List[AlertResponse])
 def get_alerts(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -311,9 +334,11 @@ def get_alerts(current_user: User = Depends(get_current_user), db: Session = Dep
 @app.post("/api/alerts", response_model=AlertResponse)
 def create_alert(data: AlertCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     symbol = data.symbol.upper()
+    # Check if stock exists
     stock = search_stock(symbol)
     if not stock:
         raise HTTPException(status_code=404, detail=f"Stock '{symbol}' not found")
+        
     valid_types = ["rsi_threshold", "signal_change", "volatility_spike"]
     if data.alert_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"Invalid alert type. Choose from: {valid_types}")
@@ -339,21 +364,26 @@ def delete_alert(alert_id: int, current_user: User = Depends(get_current_user), 
     db.commit()
     return {"message": "Alert deleted successfully"}
 
-
-#=====LSTM Forecasting=====
+# ══════════════════════════════════════════════════════════════
+# LSTM FORECASTING
+# ══════════════════════════════════════════════════════════════
 
 @app.get("/api/forecast/{symbol}", response_model=ForecastResponse)
 def get_forecast(symbol: str, days: int = 30, db: Session = Depends(get_db)):
     symbol = symbol.upper()
     if days < 7 or days > 90:
         raise HTTPException(status_code=400, detail="Forecast days must be between 7 and 90")
+        
+    # Generate the LSTM forecast
     result = generate_lstm_forecast(symbol, forecast_days=days)
     if result is None:
         raise HTTPException(status_code=404, detail=f"Unable to generate LSTM forecast for '{symbol}'")
-    #Clear old forecasts 
+        
+    # Cache/Save forecast points in the Forecasts table
+    # Clear old forecasts for this symbol first
     db.query(Forecast).filter(Forecast.symbol == symbol).delete()
     
-    #Save new forecast summary
+    # Save new forecast summary (we save final point or average prediction)
     for pt in result["forecast_points"]:
         db_f = Forecast(
             symbol=symbol,
@@ -366,7 +396,7 @@ def get_forecast(symbol: str, days: int = 30, db: Session = Depends(get_db)):
         db.add(db_f)
     db.commit()
     
-    #Convert dict keys to match ForecastResponse
+    # Convert dict keys to match ForecastResponse Pydantic model
     pts = [ForecastPoint(**pt) for pt in result["forecast_points"]]
     return ForecastResponse(
         symbol=result["symbol"],
@@ -381,16 +411,20 @@ def get_forecast(symbol: str, days: int = 30, db: Session = Depends(get_db)):
 @app.get("/api/forecast/{symbol}/trend")
 def get_forecast_trend(symbol: str, db: Session = Depends(get_db)):
     symbol = symbol.upper()
+    # Check if we have cached forecast
     latest = db.query(Forecast).filter(Forecast.symbol == symbol).order_by(Forecast.created_at.desc()).first()
     if latest:
         return {"symbol": symbol, "trend": latest.trend, "confidence": latest.confidence, "model": latest.model_name}
+        
+    # If not cached, generate a 30-day forecast to find trend
     result = generate_lstm_forecast(symbol, forecast_days=30)
     if result is None:
         raise HTTPException(status_code=404, detail=f"No forecast trend available for '{symbol}'")
     return {"symbol": symbol, "trend": result["trend"], "confidence": result["confidence"], "model": "LSTM"}
 
-
-#=====Admin Section=====
+# ══════════════════════════════════════════════════════════════
+# ADMIN SECTION (Requires Admin user authentication)
+# ══════════════════════════════════════════════════════════════
 
 @app.get("/api/admin/stats", response_model=AdminStatsResponse)
 def get_admin_stats(admin: User = Depends(get_admin_user), db: Session = Depends(get_db)):
@@ -399,7 +433,7 @@ def get_admin_stats(admin: User = Depends(get_admin_user), db: Session = Depends
     total_alerts = db.query(Alert).count()
     active_users = db.query(User).filter(User.is_active == True).count()
     
-    #To find top searched stocks
+    # Group predictions by symbol to find top searched stocks
     from sqlalchemy import func
     top_stocks_query = (
         db.query(Prediction.symbol, func.count(Prediction.symbol).label("search_count"))
@@ -408,6 +442,7 @@ def get_admin_stats(admin: User = Depends(get_admin_user), db: Session = Depends
         .limit(10)
         .all()
     )
+    
     top_stocks = [{"symbol": item[0], "count": item[1]} for item in top_stocks_query]
     
     return AdminStatsResponse(
@@ -437,6 +472,7 @@ def update_user_status(user_id: int, status_data: UserStatusUpdate, admin: User 
 
 @app.get("/api/admin/analyses")
 def get_admin_analyses(admin: User = Depends(get_admin_user), db: Session = Depends(get_db)):
+    # Fetch analyses with user details
     analyses = db.query(Prediction).order_by(Prediction.created_at.desc()).limit(100).all()
     result = []
     for item in analyses:

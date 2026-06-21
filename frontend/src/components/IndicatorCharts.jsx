@@ -1,5 +1,3 @@
-// Recharts RSI & MACD graphs
-// Recharts RSI & MACD graphs
 import {
   ResponsiveContainer,
   LineChart,

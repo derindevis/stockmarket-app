@@ -5,10 +5,10 @@ import sys
 BASE_URL = "http://localhost:8000/api"
 
 def test_api():
-    print("Testing Backend API...")
-
-    #Register User=====
-    print("Registering user...")
+    print("Testing backend API...")
+    
+    # 1. Register a user
+    print("\n1. Registering user...")
     user_data = {"username": "testuser", "email": "test@example.com", "password": "password123"}
     try:
         r = requests.post(f"{BASE_URL}/auth/register", json=user_data)
@@ -30,9 +30,10 @@ def test_api():
     except Exception as e:
         print("Error connecting to API:", e)
         return
+
     headers = {"Authorization": f"Bearer {token}"}
 
-    #Search Stock=====
+    # 2. Search stock
     print("\n2. Searching stock (AAPL)...")
     r = requests.get(f"{BASE_URL}/stocks/search?q=AAPL")
     if r.status_code == 200:
@@ -40,13 +41,14 @@ def test_api():
     else:
         print("Search Failed:", r.status_code, r.text)
 
-    #Analyze Stock=====
+    # 3. Analyze stock
     print("\n3. Analyzing stock (AAPL)...")
     r = requests.get(f"{BASE_URL}/stocks/AAPL/analysis", headers=headers)
     if r.status_code == 200:
         print("Analysis OK. Signal:", r.json().get("signal"))
     else:
         print("Analysis Failed:", r.status_code, r.text)
+        
     print("\nAll basic tests completed.")
 
 if __name__ == "__main__":

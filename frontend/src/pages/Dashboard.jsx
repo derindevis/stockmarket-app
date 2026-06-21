@@ -1,101 +1,71 @@
-// Search entry page with quick pills
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { useAuth } from "../AuthContext";
-import api from "../api";
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { useAuth } from '../AuthContext'
+import api from '../api'
 
-const quickStocks = [
-  "AAPL",
-  "GOOGL",
-  "MSFT",
-  "TSLA",
-  "AMZN",
-  "RELIANCE.NS",
-  "TCS.NS",
-];
+const quickStocks = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'RELIANCE.NS', 'TCS.NS']
 
 export default function Dashboard() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [query, setQuery] = useState("");
-  const [searchResult, setSearchResult] = useState(null);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState("");
-  const [recentAnalyses, setRecentAnalyses] = useState([]);
-  const [recentLoading, setRecentLoading] = useState(true);
-  const [watchlistMsg, setWatchlistMsg] = useState("");
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [query, setQuery] = useState('')
+  const [searchResult, setSearchResult] = useState(null)
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchError, setSearchError] = useState('')
+  const [recentAnalyses, setRecentAnalyses] = useState([])
+  const [recentLoading, setRecentLoading] = useState(true)
+  const [watchlistMsg, setWatchlistMsg] = useState('')
 
   useEffect(() => {
-    fetchRecent();
-  }, []);
+    fetchRecent()
+  }, [])
 
   const fetchRecent = async () => {
     try {
-      const res = await api.get("/history", { params: { limit: 5 } });
-      setRecentAnalyses(res.data?.analyses || res.data || []);
+      const res = await api.get('/history', { params: { limit: 5 } })
+      setRecentAnalyses(res.data?.analyses || res.data || [])
     } catch {
       // Silently fail
     } finally {
-      setRecentLoading(false);
+      setRecentLoading(false)
     }
-  };
+  }
 
   const handleSearch = async (symbol) => {
-    const searchSymbol = symbol || query.trim().toUpperCase();
-    if (!searchSymbol) return;
-    setSearchLoading(true);
-    setSearchError("");
-    setSearchResult(null);
-    setWatchlistMsg("");
+    const searchSymbol = symbol || query.trim().toUpperCase()
+    if (!searchSymbol) return
+    setSearchLoading(true)
+    setSearchError('')
+    setSearchResult(null)
+    setWatchlistMsg('')
     try {
-      const res = await api.get(`/stocks/search`, {
-        params: { q: searchSymbol },
-      });
-      setSearchResult(res.data);
+      const res = await api.get(`/stocks/search`, { params: { q: searchSymbol } })
+      setSearchResult(res.data)
     } catch (err) {
-      setSearchError(
-        err.response?.data?.detail ||
-          "Stock not found. Please check the symbol.",
-      );
+      setSearchError(err.response?.data?.detail || 'Stock not found. Please check the symbol.')
     } finally {
-      setSearchLoading(false);
+      setSearchLoading(false)
     }
-  };
+  }
 
   const addToWatchlist = async (symbol) => {
     try {
-      await api.post("/watchlist", { symbol });
-      setWatchlistMsg(`${symbol} added to watchlist!`);
-      setTimeout(() => setWatchlistMsg(""), 3000);
+      await api.post('/watchlist', { symbol })
+      setWatchlistMsg(`${symbol} added to watchlist!`)
+      setTimeout(() => setWatchlistMsg(''), 3000)
     } catch (err) {
-      setWatchlistMsg(
-        err.response?.data?.detail || "Failed to add to watchlist",
-      );
+      setWatchlistMsg(err.response?.data?.detail || 'Failed to add to watchlist')
     }
-  };
+  }
 
   const getSignalBadge = (signal) => {
-    if (!signal) return null;
-    const s = signal.toUpperCase();
-    if (s === "BUY")
-      return (
-        <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm font-medium">
-          BUY
-        </span>
-      );
-    if (s === "SELL")
-      return (
-        <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-sm font-medium">
-          SELL
-        </span>
-      );
-    return (
-      <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-sm font-medium">
-        HOLD
-      </span>
-    );
-  };
+    if (!signal) return null
+    const s = signal.toUpperCase()
+    if (s === 'BUY') return <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm font-medium">BUY</span>
+    if (s === 'SELL') return <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-sm font-medium">SELL</span>
+    return <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-sm font-medium">HOLD</span>
+  }
 
   return (
     <motion.div
@@ -107,23 +77,17 @@ export default function Dashboard() {
       {/* Welcome */}
       <div>
         <h1 className="text-2xl font-bold text-white">
-          Welcome back,{" "}
-          <span className="bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] bg-clip-text text-transparent">
-            {user?.username}
-          </span>{" "}
-          👋
+          Welcome back, <span className="bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] bg-clip-text text-transparent">{user?.username}</span> 👋
         </h1>
-        <p className="text-gray-400 text-sm mt-1">
-          Search for any stock to get AI-powered analysis
-        </p>
+        <p className="text-gray-400 text-sm mt-1">Search for any stock to get AI-powered analysis</p>
       </div>
 
       {/* Search */}
       <div className="bg-[#12121a] border border-white/[0.08] rounded-xl p-6">
         <form
           onSubmit={(e) => {
-            e.preventDefault();
-            handleSearch();
+            e.preventDefault()
+            handleSearch()
           }}
           className="flex gap-3"
         >
@@ -154,8 +118,8 @@ export default function Dashboard() {
             <button
               key={s}
               onClick={() => {
-                setQuery(s);
-                handleSearch(s);
+                setQuery(s)
+                handleSearch(s)
               }}
               className="px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] text-gray-400 text-sm hover:bg-[#6366f1]/10 hover:text-[#818cf8] hover:border-[#6366f1]/30 transition-all"
             >
@@ -188,25 +152,18 @@ export default function Dashboard() {
         >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-white">
-                {searchResult.name || searchResult.symbol}
-              </h2>
+              <h2 className="text-xl font-bold text-white">{searchResult.name || searchResult.symbol}</h2>
               <p className="text-gray-400 text-sm">{searchResult.symbol}</p>
               {searchResult.price != null && (
                 <div className="flex items-center gap-3 mt-2">
-                  <span className="text-3xl font-bold text-white">
-                    ${Number(searchResult.price).toFixed(2)}
-                  </span>
+                  <span className="text-3xl font-bold text-white">${Number(searchResult.price).toFixed(2)}</span>
                   {searchResult.change != null && (
-                    <span
-                      className={`text-sm font-medium px-2 py-1 rounded ${
-                        searchResult.change >= 0
-                          ? "bg-emerald-500/20 text-emerald-400"
-                          : "bg-red-500/20 text-red-400"
-                      }`}
-                    >
-                      {searchResult.change >= 0 ? "+" : ""}
-                      {Number(searchResult.change).toFixed(2)}%
+                    <span className={`text-sm font-medium px-2 py-1 rounded ${
+                      searchResult.change >= 0
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : 'bg-red-500/20 text-red-400'
+                    }`}>
+                      {searchResult.change >= 0 ? '+' : ''}{Number(searchResult.change).toFixed(2)}%
                     </span>
                   )}
                 </div>
@@ -232,9 +189,7 @@ export default function Dashboard() {
 
       {/* Recent Analyses */}
       <div>
-        <h2 className="text-lg font-semibold text-white mb-4">
-          Recent Analyses
-        </h2>
+        <h2 className="text-lg font-semibold text-white mb-4">Recent Analyses</h2>
         {recentLoading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#6366f1] border-t-transparent" />
@@ -256,9 +211,7 @@ export default function Dashboard() {
                 className="bg-[#12121a] border border-white/[0.08] rounded-xl p-5 hover:border-white/[0.15] transition-all duration-300 cursor-pointer group"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-semibold group-hover:text-[#818cf8] transition-colors">
-                    {a.symbol}
-                  </span>
+                  <span className="text-white font-semibold group-hover:text-[#818cf8] transition-colors">{a.symbol}</span>
                   {getSignalBadge(a.signal)}
                 </div>
                 {a.confidence != null && (
@@ -276,9 +229,7 @@ export default function Dashboard() {
                   </div>
                 )}
                 {a.date && (
-                  <p className="text-gray-500 text-xs mt-3">
-                    {new Date(a.date).toLocaleDateString()}
-                  </p>
+                  <p className="text-gray-500 text-xs mt-3">{new Date(a.date).toLocaleDateString()}</p>
                 )}
               </motion.div>
             ))}
@@ -286,5 +237,5 @@ export default function Dashboard() {
         )}
       </div>
     </motion.div>
-  );
+  )
 }

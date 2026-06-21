@@ -1,4 +1,3 @@
-# Scoring engine & Gemini AI API justification
 import os
 import logging
 from typing import Dict, Any

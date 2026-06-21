@@ -1,1 +1,36 @@
-.venv
+# Dependency directories
+node_modules/
+
+# Python Virtual Environments and cache
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Local logs
+*.log
+
+# Build outputs
+dist/
+build/
+.vite/
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

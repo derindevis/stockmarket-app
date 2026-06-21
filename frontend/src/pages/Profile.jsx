@@ -1,4 +1,3 @@
-// Account profile details view
 import { useAuth } from '../AuthContext'
 import { motion } from 'framer-motion'
 

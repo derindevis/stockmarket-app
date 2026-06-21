@@ -1,1 +1,17 @@
-.venv
+# Python local envs and caches
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Environment files
+.env
+.env.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log

@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
-#=====Auth Schemas=====
+# ── Auth Schemas ────────────────────────────────────────────────
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
@@ -26,8 +26,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
-
-#=====Stock=====
+# ── Stock Schemas ───────────────────────────────────────────────
 class StockSearchResult(BaseModel):
     symbol: str
     name: Optional[str] = None
@@ -56,8 +55,7 @@ class StockDetail(BaseModel):
     industry: Optional[str] = None
     description: Optional[str] = None
 
-
-#=====Analysis & Indicator=====
+# ── Analysis & Indicator Schemas ────────────────────────────────
 class IndicatorValues(BaseModel):
     rsi: Optional[float] = None
     macd: Optional[float] = None
@@ -81,8 +79,7 @@ class AnalysisResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-
-#=====Watchlist=====
+# ── Watchlist Schemas ───────────────────────────────────────────
 class WatchlistAdd(BaseModel):
     symbol: str
 
@@ -95,8 +92,7 @@ class WatchlistResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-
-#=====Prediction/History=====
+# ── Prediction/History Schemas ──────────────────────────────────
 class PredictionResponse(BaseModel):
     id: int
     symbol: str
@@ -114,8 +110,7 @@ class PredictionResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-
-#=====Compare=====
+# ── Comparison Schemas ──────────────────────────────────────────
 class CompareRequest(BaseModel):
     symbols: List[str]
 
@@ -130,11 +125,10 @@ class CompareRequest(BaseModel):
 class CompareResponse(BaseModel):
     stocks: List[Dict[str, Any]]
 
-
-#=====Alert Schemas=====
+# ── Alert Schemas ───────────────────────────────────────────────
 class AlertCreate(BaseModel):
     symbol: str
-    alert_type: str  
+    alert_type: str  # "rsi_threshold", "signal_change", "volatility_spike"
     threshold: float
 
 class AlertResponse(BaseModel):
@@ -147,8 +141,7 @@ class AlertResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-
-#=====Forecast=====
+# ── Forecast Schemas ────────────────────────────────────────────
 class ForecastPoint(BaseModel):
     date: str
     predicted_price: float
@@ -166,8 +159,7 @@ class ForecastResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True, protected_namespaces=())
 
-
-#=====Admin Schemas=====
+# ── Admin Schemas ───────────────────────────────────────────────
 class AdminStatsResponse(BaseModel):
     total_users: int
     total_analyses: int

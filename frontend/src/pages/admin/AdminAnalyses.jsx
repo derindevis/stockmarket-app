@@ -1,37 +1,32 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import api from "../../api";
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import api from '../../api'
 
 export default function AdminAnalyses() {
-  const [analyses, setAnalyses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [analyses, setAnalyses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     const fetchAnalyses = async () => {
       try {
-        const res = await api.get("/admin/analyses");
-        setAnalyses(res.data);
+        const res = await api.get('/admin/analyses')
+        setAnalyses(res.data)
       } catch (err) {
-        console.error("Error fetching admin analyses:", err);
-        setError("Failed to fetch platform prediction logs.");
+        console.error('Error fetching admin analyses:', err)
+        setError('Failed to fetch platform prediction logs.')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-    fetchAnalyses();
-  }, []);
+    }
+    fetchAnalyses()
+  }, [])
 
   return (
     <div className="min-h-screen p-6 space-y-6 bg-[#0a0a0f] text-gray-200">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-wide">
-          📜 Platform Technical Analyses
-        </h1>
-        <p className="text-gray-400 text-sm mt-1">
-          Audit runs of indicator models and signal recommendations triggered by
-          users.
-        </p>
+        <h1 className="text-2xl font-bold text-white tracking-wide">📜 Platform Technical Analyses</h1>
+        <p className="text-gray-400 text-sm mt-1">Audit runs of indicator models and signal recommendations triggered by users.</p>
       </div>
 
       {error && (
@@ -70,48 +65,30 @@ export default function AdminAnalyses() {
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
                 {analyses.map((item) => {
-                  const badgeColor =
-                    item.signal === "BUY"
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : item.signal === "SELL"
-                        ? "bg-red-500/20 text-red-400"
-                        : "bg-yellow-500/20 text-yellow-400";
+                  const badgeColor = 
+                    item.signal === 'BUY' ? 'bg-emerald-500/20 text-emerald-400' :
+                    item.signal === 'SELL' ? 'bg-red-500/20 text-red-400' :
+                    'bg-yellow-500/20 text-yellow-400'
 
                   return (
                     <tr key={item.id} className="hover:bg-white/[0.01]">
-                      <td className="p-4 text-white font-semibold">
-                        {item.username}
-                      </td>
-                      <td className="p-4 font-bold text-white text-base">
-                        {item.symbol}
-                      </td>
+                      <td className="p-4 text-white font-semibold">{item.username}</td>
+                      <td className="p-4 font-bold text-white text-base">{item.symbol}</td>
                       <td className="p-4">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${badgeColor}`}
-                        >
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${badgeColor}`}>
                           {item.signal}
                         </span>
                       </td>
-                      <td className="p-4 font-semibold text-white">
-                        {item.confidence}%
-                      </td>
-                      <td className="p-4 text-gray-400">
-                        {item.rsi?.toFixed(1) || "N/A"}
-                      </td>
-                      <td className="p-4 text-gray-400">
-                        {item.macd?.toFixed(3) || "N/A"}
-                      </td>
-                      <td className="p-4 text-gray-400">
-                        ${item.moving_average?.toFixed(2) || "N/A"}
-                      </td>
-                      <td className="p-4 text-gray-400">
-                        {item.beta?.toFixed(2) || "N/A"}
-                      </td>
+                      <td className="p-4 font-semibold text-white">{item.confidence}%</td>
+                      <td className="p-4 text-gray-400">{item.rsi?.toFixed(1) || 'N/A'}</td>
+                      <td className="p-4 text-gray-400">{item.macd?.toFixed(3) || 'N/A'}</td>
+                      <td className="p-4 text-gray-400">${item.moving_average?.toFixed(2) || 'N/A'}</td>
+                      <td className="p-4 text-gray-400">{item.beta?.toFixed(2) || 'N/A'}</td>
                       <td className="p-4 text-gray-400 text-xs">
                         {new Date(item.created_at).toLocaleString()}
                       </td>
                     </tr>
-                  );
+                  )
                 })}
               </tbody>
             </table>
@@ -119,5 +96,5 @@ export default function AdminAnalyses() {
         </div>
       )}
     </div>
-  );
+  )
 }

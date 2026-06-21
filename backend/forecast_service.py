@@ -38,18 +38,19 @@ def create_sequences(data, seq_length=60):
 def generate_lstm_forecast(symbol: str, forecast_days: int = 30) -> dict | None:
     try:
         symbol = symbol.upper()
-        ticker = yf.Ticker(symbol, session=session)
+        
+        from stock_service import get_stock_history
         
         # 1. Fetch historical data (1 year is standard, let's fetch 1y)
-        hist = ticker.history(period="1y")
-        if hist.empty or len(hist) < 80:
+        hist_data = get_stock_history(symbol, period="1y")
+        if not hist_data or len(hist_data) < 80:
             # Fallback to a longer period if 1y is short or missing
-            hist = ticker.history(period="2y")
-            if hist.empty or len(hist) < 80:
+            hist_data = get_stock_history(symbol, period="2y")
+            if not hist_data or len(hist_data) < 80:
                 print(f"Not enough historical data for {symbol} to run LSTM (need >= 80 days).")
                 return None
 
-        close_prices = hist["Close"].values.reshape(-1, 1)
+        close_prices = np.array([x["close"] for x in hist_data]).reshape(-1, 1)
         current_price = float(close_prices[-1][0])
 
         # 2. Normalize data

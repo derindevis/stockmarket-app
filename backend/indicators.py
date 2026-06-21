@@ -131,19 +131,20 @@ def calculate_all_indicators(symbol: str) -> Optional[dict]:
     """Fetch 1 year of daily history and calculate all indicators."""
     try:
         symbol = symbol.upper()
-        ticker = yf.Ticker(symbol, session=session)
+        
+        from stock_service import get_stock_history, get_stock_details
+        
         # Fetch 1 year of historical data
-        hist = ticker.history(period="1y")
-        if hist.empty or len(hist) < 30:
+        hist_data = get_stock_history(symbol, period="1y")
+        if not hist_data or len(hist_data) < 30:
             return None
             
-        close_prices = hist["Close"]
+        close_prices = pd.Series([x["close"] for x in hist_data])
         
         # Fetch SPY benchmark for Beta calculation
-        spy_ticker = yf.Ticker("SPY", session=session)
-        spy_hist = spy_ticker.history(period="1y")
-        if not spy_hist.empty:
-            spy_close_prices = spy_hist["Close"]
+        spy_hist_data = get_stock_history("SPY", period="1y")
+        if spy_hist_data:
+            spy_close_prices = pd.Series([x["close"] for x in spy_hist_data])
         else:
             spy_close_prices = close_prices  # Fallback to self (Beta=1)
             
@@ -155,9 +156,14 @@ def calculate_all_indicators(symbol: str) -> Optional[dict]:
         vol_val = calculate_volatility(close_prices)
         sharpe_val = calculate_sharpe_ratio(close_prices)
         
-        # P/E ratio from info
-        info = ticker.info
-        pe_ratio = info.get("trailingPE") or info.get("forwardPE")
+        # P/E ratio from stock details (which has REST fallback)
+        pe_ratio = None
+        try:
+            details = get_stock_details(symbol)
+            if details:
+                pe_ratio = details.get("pe_ratio")
+        except Exception as pe_err:
+            print(f"Error getting PE ratio for indicators of {symbol}: {pe_err}")
         
         return {
             "rsi": rsi_val,
@@ -172,8 +178,7 @@ def calculate_all_indicators(symbol: str) -> Optional[dict]:
             "pe_ratio": float(pe_ratio) if pe_ratio else None,
             "sharpe_ratio": sharpe_val,
             "volatility": vol_val,
-            "current_price": float(close_prices.iloc[-1])
         }
     except Exception as e:
-        print(f"Error calculating indicators for {symbol}: {e}")
+        print(f"Error calculating all indicators for {symbol}: {e}")
         return None

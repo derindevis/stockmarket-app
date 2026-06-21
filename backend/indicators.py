@@ -1,7 +1,13 @@
 import pandas as pd
 import numpy as np
 import yfinance as yf
+import requests
 from typing import Optional
+
+session = requests.Session()
+session.headers.update({
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+})
 
 def calculate_rsi(prices: pd.Series, period: int = 14) -> float:
     """Calculate the Relative Strength Index (RSI)."""
@@ -125,7 +131,7 @@ def calculate_all_indicators(symbol: str) -> Optional[dict]:
     """Fetch 1 year of daily history and calculate all indicators."""
     try:
         symbol = symbol.upper()
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=session)
         # Fetch 1 year of historical data
         hist = ticker.history(period="1y")
         if hist.empty or len(hist) < 30:
@@ -134,7 +140,7 @@ def calculate_all_indicators(symbol: str) -> Optional[dict]:
         close_prices = hist["Close"]
         
         # Fetch SPY benchmark for Beta calculation
-        spy_ticker = yf.Ticker("SPY")
+        spy_ticker = yf.Ticker("SPY", session=session)
         spy_hist = spy_ticker.history(period="1y")
         if not spy_hist.empty:
             spy_close_prices = spy_hist["Close"]

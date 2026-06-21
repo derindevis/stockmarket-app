@@ -1,12 +1,18 @@
 import yfinance as yf
 import pandas as pd
 import numpy as np
+import requests
+
+session = requests.Session()
+session.headers.update({
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+})
 
 def search_stock(query: str) -> dict | None:
     """Search for a stock by ticker symbol and return basic info."""
     try:
         symbol = query.upper()
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=session)
         info = ticker.info
 
         # Fallback fields for price
@@ -51,7 +57,7 @@ def get_stock_details(symbol: str) -> dict | None:
     """Get comprehensive details for a stock."""
     try:
         symbol = symbol.upper()
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=session)
         info = ticker.info
 
         price = info.get("regularMarketPrice") or info.get("currentPrice") or info.get("navPrice")
@@ -101,7 +107,7 @@ def get_stock_history(symbol: str, period: str = "1mo") -> list[dict]:
     """Get historical price data for a stock."""
     try:
         symbol = symbol.upper()
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=session)
         hist = ticker.history(period=period)
 
         if hist.empty:
@@ -126,7 +132,7 @@ def get_stock_price(symbol: str) -> float | None:
     """Quickly fetch just the current price of a stock."""
     try:
         symbol = symbol.upper()
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=session)
         try:
             return round(float(ticker.fast_info.last_price), 2)
         except Exception:

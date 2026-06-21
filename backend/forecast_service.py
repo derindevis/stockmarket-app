@@ -3,7 +3,13 @@ import torch.nn as nn
 import numpy as np
 import pandas as pd
 import yfinance as yf
+import requests
 from sklearn.preprocessing import MinMaxScaler
+
+session = requests.Session()
+session.headers.update({
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+})
 from datetime import datetime, timedelta
 
 class StockLSTM(nn.Module):
@@ -32,7 +38,7 @@ def create_sequences(data, seq_length=60):
 def generate_lstm_forecast(symbol: str, forecast_days: int = 30) -> dict | None:
     try:
         symbol = symbol.upper()
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=session)
         
         # 1. Fetch historical data (1 year is standard, let's fetch 1y)
         hist = ticker.history(period="1y")

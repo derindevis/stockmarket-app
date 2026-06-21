@@ -1,5 +1,4 @@
 // Allows comparing 2-4 stock ticker symbols side-by-side
-// Allows comparing 2-4 stock ticker symbols side-by-side
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'

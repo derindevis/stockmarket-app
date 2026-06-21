@@ -53,6 +53,29 @@ def read_root():
         "docs_url": "/docs"
     }
 
+@app.get("/api/test-query")
+def test_query():
+    import requests
+    res = {}
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'}
+    try:
+        r = requests.get("https://query1.finance.yahoo.com/v8/finance/chart/AAPL", headers=headers, timeout=5)
+        res['chart_status'] = r.status_code
+        res['chart_data_keys'] = list(r.json().keys()) if r.status_code == 200 else None
+        if r.status_code == 429:
+            res['chart_text'] = r.text[:200]
+    except Exception as e:
+        res['chart_error'] = str(e)
+    try:
+        r2 = requests.get("https://query2.finance.yahoo.com/v1/finance/search?q=AAPL", headers=headers, timeout=5)
+        res['search_status'] = r2.status_code
+        res['search_data_keys'] = list(r2.json().keys()) if r2.status_code == 200 else None
+        if r2.status_code == 429:
+            res['search_text'] = r2.text[:200]
+    except Exception as e:
+        res['search_error'] = str(e)
+    return res
+
 # ══════════════════════════════════════════════════════════════
 # AUTHENTICATION
 # ══════════════════════════════════════════════════════════════
